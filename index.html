@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ค้นหาโฉนด Kavalon</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one narrow column — sticky search bar, building chips, then a list of deed rows with actions */
+:root{
+  --bg:#f4f5f0; --surface:#ffffff; --fg:#1d2420; --muted:#5f6b64; --line:#dde2da;
+  --ink:#1f5a43; --ink-soft:#e3efe8; --line-green:#06c755; --line-green-fg:#ffffff; --warn:#8a5a00; --warn-bg:#fff4dc;
+  --sans:"IBM Plex Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121614; --surface:#1a201d; --fg:#e6ece8; --muted:#9aa8a0; --line:#2c3531;
+  --ink:#7fcca6; --ink-soft:#1f3329; --line-green:#06c755; --line-green-fg:#04210f; --warn:#f3c56b; --warn-bg:#2d2410; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121614; --surface:#1a201d; --fg:#e6ece8; --muted:#9aa8a0; --line:#2c3531;
+  --ink:#7fcca6; --ink-soft:#1f3329; --line-green:#06c755; --line-green-fg:#04210f; --warn:#f3c56b; --warn-bg:#2d2410; color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 60px}
+header h1{font-size:1.45rem;margin:0;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted);font-size:.9rem}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:14px 10px;display:grid;gap:10px}
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:0 12px}
+.search:focus-within{border-color:var(--ink)}
+.search input{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font:inherit;font-size:1.05rem;padding:12px 0;outline:none}
+.search svg{flex:none;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 .85rem var(--sans);border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:4px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.chip:focus-visible,.btn:focus-visible,.pick:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.meta{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:.85rem;gap:8px;flex-wrap:wrap}
+.note{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:.85rem}
+.list{display:grid;gap:8px;margin-top:6px}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.row.sel{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.pick{width:20px;height:20px;accent-color:var(--ink);cursor:pointer}
+.id{min-width:0}
+.unit{font:600 1.1rem var(--mono);letter-spacing:.02em}
+.addr{color:var(--muted);font-size:.88rem;font-variant-numeric:tabular-nums}
+.addr b{color:var(--fg);font-weight:600}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.btn{display:inline-flex;align-items:center;gap:6px;font:600 .85rem var(--sans);text-decoration:none;border-radius:8px;padding:7px 11px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--ink)}
+.btn.line{background:var(--line-green);border-color:var(--line-green);color:var(--line-green-fg)}
+.btn.dl{background:var(--ink-soft);border-color:transparent;color:var(--ink)}
+.empty{text-align:center;color:var(--muted);padding:40px 0}
+.more{margin:12px auto 0;display:block}
+.tray{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+.tray .in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between}
+.tray .cnt{font-weight:600}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:.88rem;z-index:7}
+@media (max-width:560px){
+  .row{grid-template-columns:auto 1fr}
+  .acts{grid-column:1 / -1;justify-content:stretch}
+  .acts .btn{flex:1;justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<style>
+.link{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--ink-soft);color:var(--fg);border-radius:8px;padding:10px 12px;font-size:.88rem}
+.link.ok{background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.btn.drag{cursor:grab}
+.btn[aria-disabled="true"]{opacity:.45;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ค้นหาโฉนด Kavalon</h1>
+    <p>ค้นได้ทั้งเลข Unit หรือบ้านเลขที่ แล้วเปิดดู ดาวน์โหลด หรือส่งไฟล์ต่อทาง LINE · 2,195 ห้อง อาคาร A–I</p>
+  </header>
+
+  <div class="bar">
+    <label class="search" for="q">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" autocomplete="off" placeholder="เช่น A0301, 108/28, 28 (คั่นหลายห้องด้วยเว้นวรรค)" autofocus>
+    </label>
+    <div class="chips" id="chips" role="group" aria-label="เลือกอาคาร"></div>
+    <div class="meta"><span id="count"></span></div>
+  </div>
+
+  <div class="link" id="linkBox">
+    <span id="linkMsg"><b>อยากแชร์ไฟล์เข้า LINE ด้วยปุ่มเดียว?</b> กด “เชื่อมโฟลเดอร์” แล้วเลือกโฟลเดอร์ TD_Kavalon ครั้งเดียวต่อการเปิดแอป (ไฟล์ไม่ถูกส่งไปไหน อ่านในเครื่องเท่านั้น)</span>
+    <label class="btn" for="dir">เชื่อมโฟลเดอร์</label>
+    <input id="dir" type="file" webkitdirectory multiple hidden>
+  </div>
+
+  <div class="list" id="list"></div>
+  <button class="btn more" id="more" type="button" hidden>แสดงเพิ่ม</button>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const RUNS="1-3=SH001-SH003 4-12=A0130-A0138 14-27=A0201-A0214 28-40=A0301-A0313 41-62=A0317-A0338 63-100=A0401-A0438 101-138=A0501-A0538 139-176=A0601-A0638 177-214=A0701-A0738 215-252=A0801-A0838 253-263=B0123-B0133 264-276=B0203-B0215 277-293=B0217-B0233 294-328=B0301-B0335 329-363=B0401-B0435 364-398=B0501-B0535 399-433=B0601-B0635 434-468=B0701-B0735 469-484=B0801-B0816 485-486=B0818-B0819 487-500=B0822-B0835 501-514=C0117-C0130 515-545=C0201-C0231 546-548=C0234-C0236 549-585=C0301-C0337 586-622=C0401-C0437 623-659=C0501-C0537 660-696=C0601-C0637 697-733=C0701-C0737 734-764=C0801-C0831 765-766=C0834-C0835 767-767=C0837-C0837 768-787=D0201-D0220 788-802=D0223-D0237 803-824=D0301-D0322 825-838=D0324-D0337 839-875=D0401-D0437 876-912=D0501-D0537 913-949=D0601-D0637 950-986=D0701-D0737 987-1023=D0801-D0837 1024-1048=E0201-E0225 1049-1057=E0227-E0235 1058-1082=E0301-E0325 1083-1090=E0328-E0335 1091-1125=E0401-E0435 1126-1160=E0501-E0535 1161-1195=E0601-E0635 1196-1230=E0701-E0735 1231-1265=E0801-E0835 1266-1272=F0114-F0120 1273-1279=F0123-F0129 1280-1299=F0201-F0220 1300-1306=F0223-F0229 1307-1310=F0232-F0235 1311-1339=F0301-F0329 1340-1343=F0332-F0335 1344-1378=F0401-F0435 1379-1413=F0501-F0535 1414-1448=F0601-F0635 1449-1483=F0701-F0735 1484-1518=F0801-F0835 1519-1527=G0126-G0134 1528-1548=G0201-G0221 1549-1551=G0224-G0226 1552-1585=G0301-G0334 1586-1619=G0401-G0434 1620-1653=G0501-G0534 1654-1687=G0601-G0634 1688-1721=G0701-G0734 1722-1737=G0801-G0816 1738-1746=G0826-G0834 1747-1753=H0116-H0122 1754-1758=H0130-H0134 1759-1780=H0201-H0222 1781-1785=H0230-H0234 1786-1819=H0301-H0334 1820-1853=H0401-H0434 1854-1887=H0501-H0534 1888-1921=H0601-H0634 1922-1955=H0701-H0734 1956-1977=H0801-H0822 1978-1982=I0112-I0116 1983-1993=I0201-I0211 1994-1999=I0217-I0222 2000-2004=I0228-I0232 2005-2036=I0301-I0332 2037-2068=I0401-I0432 2069-2100=I0501-I0532 2101-2132=I0601-I0632 2133-2164=I0701-I0732 2165-2196=I0801-I0832";
+const UNITS=[];
+RUNS.split(" ").forEach(r=>{
+  const [hs,cs]=r.split("="); const [h1,h2]=hs.split("-").map(Number); const [c1]=cs.split("-");
+  const pre=c1.slice(0,-2), r1=+c1.slice(-2);
+  for(let i=0;i<=h2-h1;i++){
+    const unit=pre+String(r1+i).padStart(2,"0"), h=h1+i;
+    const bld=unit.startsWith("SH")?"A":unit[0];
+    const floor=unit.startsWith("SH")?1:+unit.slice(1,3);
+    UNITS.push({unit,h,bld,floor,file:`TD_KVL_${unit}_108-${h}.pdf`});
+  }
+});
+const rel=u=>encodeURI("อาคาร "+u.bld+"/"+u.file);
+const abs=u=>new URL(rel(u),location.href).href;
+const FILES=new Map();   // filename -> File (after linking the folder)
+const blobs=new Map();
+const blobUrl=f=>{if(!blobs.has(f.name))blobs.set(f.name,URL.createObjectURL(f));return blobs.get(f.name);};
+
+const $=id=>document.getElementById(id);
+let bld="all", shown=60;
+const BLDS=["all","A","B","C","D","E","F","G","H","I"];
+$("chips").innerHTML=BLDS.map(b=>`<button class="chip" type="button" data-b="${b}" aria-pressed="${b==="all"}">${b==="all"?"ทุกอาคาร":"อาคาร "+b}</button>`).join("");
+$("chips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;bld=b.dataset.b;shown=60;
+  document.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b));render();});
+
+function match(u,t){
+  t=t.toUpperCase();
+  const m=t.match(/^108\s*[\/\-]\s*(\d+)$/);
+  if(m) return String(u.h)===m[1];
+  if(/^\d+$/.test(t)) return String(u.h)===t || (t.length>=4 && u.unit.includes(t));
+  return u.unit.includes(t);
+}
+function filtered(){
+  const terms=$("q").value.trim().split(/[\s,]+/).filter(Boolean);
+  return UNITS.filter(u=>(bld==="all"||u.bld===bld)&&(!terms.length||terms.some(t=>match(u,t))));
+}
+function rowHtml(u){
+  const f=FILES.get(u.file), href=f?blobUrl(f):rel(u);
+  return `<div class="row" data-u="${u.unit}" style="grid-template-columns:1fr auto">
+    <div class="id"><div class="unit">${u.unit}</div>
+      <div class="addr">บ้านเลขที่ <b>108/${u.h}</b> · อาคาร ${u.bld} ชั้น ${u.floor}</div></div>
+    <div class="acts">
+      <a class="btn" href="${href}" target="_blank" rel="noopener">เปิดดู</a>
+      <a class="btn dl" href="${href}" download="${u.file}">ดาวน์โหลด</a>
+      <a class="btn drag" href="${href}" draggable="true" data-act="drag" title="ลากปุ่มนี้ไปวางในห้องแชต LINE">ลากไป LINE</a>
+      <button class="btn line" type="button" data-act="share">แชร์ LINE</button>
+    </div></div>`;
+}
+let cur=[];
+function render(){
+  cur=filtered();
+  $("count").textContent=`พบ ${cur.length.toLocaleString()} ห้อง`;
+  $("list").innerHTML=cur.length?cur.slice(0,shown).map(rowHtml).join(""):`<div class="empty">ไม่พบห้องที่ตรงกับ “${$("q").value}” ลองพิมพ์เลข Unit เช่น A0301 หรือบ้านเลขที่ เช่น 108/28</div>`;
+  $("more").hidden=cur.length<=shown;
+  $("more").textContent=`แสดงเพิ่ม (เหลืออีก ${(cur.length-shown).toLocaleString()} ห้อง)`;
+}
+const unitOf=el=>UNITS.find(x=>x.unit===el.closest(".row").dataset.u);
+
+$("list").addEventListener("dragstart",e=>{
+  const a=e.target.closest("[data-act=drag]"); if(!a)return;
+  const u=unitOf(a), f=FILES.get(u.file);
+  const url=f?new URL(blobUrl(f),location.href).href:abs(u);
+  e.dataTransfer.setData("DownloadURL",`application/pdf:${u.file}:${url}`);
+  e.dataTransfer.setData("text/uri-list",url);
+});
+$("list").addEventListener("click",async e=>{
+  const b=e.target.closest("[data-act=share]"); if(!b)return;
+  const u=unitOf(b), f=FILES.get(u.file);
+  if(!f){toast("กด “เชื่อมโฟลเดอร์” ก่อน หรือใช้ปุ่ม “ลากไป LINE” ลากไฟล์ไปวางในแชต");$("linkBox").scrollIntoView({behavior:"smooth",block:"center"});return;}
+  const data={files:[f],title:u.file,text:`โฉนด Kavalon Unit ${u.unit} (บ้านเลขที่ 108/${u.h})`};
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share(data);}catch(err){if(err.name!=="AbortError")toast("แชร์ไม่สำเร็จ ลองใช้ปุ่ม “ลากไป LINE” แทน");}
+  }else toast("เบราว์เซอร์นี้แชร์ไฟล์ไม่ได้ ใช้ Chrome หรือ Edge หรือใช้ปุ่ม “ลากไป LINE”");
+});
+$("dir").addEventListener("change",e=>{
+  FILES.clear();
+  for(const f of e.target.files) if(/^TD_KVL_.*\.pdf$/i.test(f.name)) FILES.set(f.name,f);
+  const hit=UNITS.filter(u=>FILES.has(u.file)).length;
+  $("linkBox").classList.add("ok");
+  $("linkMsg").textContent=`เชื่อมโฟลเดอร์แล้ว พบไฟล์ ${hit.toLocaleString()} จาก ${UNITS.length.toLocaleString()} ห้อง ปุ่ม “แชร์ LINE” พร้อมใช้`;
+  render();
+});
+$("q").addEventListener("input",()=>{shown=60;render();});
+$("more").addEventListener("click",()=>{shown+=120;render();});
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200);}
+render();
+</script>
+</body>
+</html>
